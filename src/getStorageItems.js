@@ -5,12 +5,12 @@ export const getStorageItems = async () => {
   const { supabaseApiSecret } = await chrome.storage.sync.get(
     'supabaseApiSecret'
   );
-  const { newBookmarkBehaviour } = await chrome.storage.sync.get(
-    'newBookmarkBehaviour'
+  const { newBookmarkWindowBehaviour } = await chrome.storage.sync.get(
+    'newBookmarkWindowBehaviour'
   );
   return {
     otterInstanceUrl,
     supabaseApiSecret,
-    newBookmarkBehaviour,
+    newBookmarkWindowBehaviour,
   };
 };

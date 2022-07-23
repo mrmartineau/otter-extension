@@ -14,7 +14,7 @@ window.onload = function () {
     chrome.storage.sync.set({
       otterInstanceUrl: formData.get('url'),
       supabaseApiSecret: formData.get('api-secret'),
-      newBookmarkBehaviour: formData.get('new-bookmark-behaviour'),
+      newBookmarkWindowBehaviour: formData.get('new-bookmark-window-behaviour'),
     });
     chrome.action.setBadgeText({
       text: '',

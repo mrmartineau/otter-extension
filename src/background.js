@@ -7,20 +7,21 @@ import { getStorageItems } from './getStorageItems';
 // For more information on background script,
 // See https://developer.chrome.com/extensions/background_pages
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GREETINGS') {
-    const message = `Hi ${
-      sender.tab ? 'Con' : 'Pop'
-    }, my name is Bac. I am from Background. It's great to hear from you.`;
+// chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+//   if (request.type === 'GREETINGS') {
+//     const message = `Hi ${
+//       sender.tab ? 'Con' : 'Pop'
+//     }, my name is Bac. I am from Background. It's great to hear from you.`;
 
-    // Log message coming from the `request` parameter
-    console.log(request.payload.message);
-    // Send a response message
-    sendResponse({
-      message,
-    });
-  }
-});
+//     // Log message coming from the `request` parameter
+//     console.log(request.payload.message);
+//     // Send a response message
+//     sendResponse({
+//       message,
+//     });
+//   }
+// });
+
 let screenWidth;
 let screenHeight;
 chrome.system.display.getInfo((info) => {
@@ -40,79 +41,85 @@ const isOptionsSetup = async () => {
   }
 };
 
-chrome.action.onClicked.addListener(async (tab) => {
-  if ((await isOptionsSetup()) === false) {
-    console.info('options not setup');
+const openBookmarkletPage = async (url) => {
+  const { otterInstanceUrl, newBookmarkWindowBehaviour } =
+    await getStorageItems();
+  // create new bookmark
+  if (newBookmarkWindowBehaviour === 'tab') {
     chrome.tabs.create({
-      url: `chrome-extension://${chrome.runtime.id}/options.html`,
+      url: urlJoin(otterInstanceUrl, 'new', 'bookmark', {
+        query: {
+          bookmarklet: 'true',
+          url,
+        },
+      }),
     });
-    return;
+  } else {
+    const posX = (screenWidth - 730) / 2;
+    const posY = (screenHeight - 800) / 2;
+    chrome.windows.create({
+      url: urlJoin(otterInstanceUrl, 'new', 'bookmark', {
+        query: {
+          bookmarklet: 'true',
+          url,
+        },
+      }),
+      height: 800,
+      width: 500,
+      left: posX,
+      top: posY,
+      type: 'panel',
+    });
   }
+};
 
-  try {
-    const { otterInstanceUrl, newBookmarkBehaviour } = await getStorageItems();
-    const response = await checkUrl(tab.url);
-    const { isSaved, data } = response;
-    if (isSaved) {
-      // bookmark already exists, visit its page on Otter
-      chrome.tabs.create({
-        url: urlJoin(otterInstanceUrl, 'bookmark', data.key),
-      });
-    } else {
-      // create new bookmark
-      if (newBookmarkBehaviour === 'tab') {
-        chrome.tabs.create({
-          url: urlJoin(otterInstanceUrl, 'new', 'bookmark', {
-            query: {
-              bookmarklet: 'true',
-              url: tab.url,
-            },
-          }),
-        });
+const onContextClick = async (info, tab, saveQuick = true) => {
+  if (saveQuick) {
+    try {
+      if (info.linkUrl) {
+        quickSave(info.linkUrl);
       } else {
-        const posX = (screenWidth - 730) / 2;
-        const posY = (screenHeight - 800) / 2;
-        chrome.windows.create({
-          url: urlJoin(otterInstanceUrl, 'new', 'bookmark', {
-            query: {
-              bookmarklet: 'true',
-              url: tab.url,
-            },
-          }),
-          height: 800,
-          width: 500,
-          left: posX,
-          top: posY,
-          type: 'panel',
-        });
+        quickSave(tab.url);
       }
+    } catch (err) {
+      console.log(
+        `🚀 ~ onContextClick ~ saveQuick ~ onCommand.addListener ~ err`,
+        err
+      );
     }
-  } catch (err) {
-    console.log(`🚀 ~ chrome.action.onClicked.addListener ~ err`, err);
+  } else {
+    try {
+      if (info.linkUrl) {
+        openBookmarkletPage(info.linkUrl);
+      } else {
+        openBookmarkletPage(tab.url);
+      }
+    } catch (err) {
+      console.log(
+        `🚀 ~ onContextClick ~ save ~ onCommand.addListener ~ err`,
+        err
+      );
+    }
   }
-});
+};
 
-chrome.webNavigation.onCompleted.addListener(async (details) => {
-  if ((await isOptionsSetup()) === false) {
-    return;
-  }
-
+const quickSave = async (url) => {
   try {
-    const response = await checkUrl(details.url);
-    console.log(
-      `🚀 ~ chrome.webNavigation.onCompleted.addListener ~ response`,
-      response
+    const { otterInstanceUrl } = await getStorageItems();
+    const response = await otterFetch(
+      urlJoin(otterInstanceUrl, 'api', 'bookmark', 'new', {
+        query: {
+          url,
+        },
+      })
     );
-    const { isSaved } = response;
-    if (isSaved) {
-      chrome.action.setBadgeText({
-        text: '🟢',
-      });
-    }
+    const { data } = response;
+    console.log(`🚀 ~ quickSave ~ data`, data);
+    return data;
   } catch (err) {
-    console.log(`🚀 ~ chrome.webNavigation.onCompleted.addListener ~ err`, err);
+    console.log(`🚀 ~ quickSave ~ err`, err);
   }
-});
+};
 
 const checkUrl = async (url) => {
   try {
@@ -158,3 +165,94 @@ const otterFetch = async (url) => {
     }
   });
 };
+
+chrome.action.onClicked.addListener(async (tab) => {
+  if ((await isOptionsSetup()) === false) {
+    console.info('options not setup');
+    chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+    return;
+  }
+
+  try {
+    const { otterInstanceUrl } = await getStorageItems();
+    const response = await checkUrl(tab.url);
+    const { isSaved, data } = response;
+    if (isSaved) {
+      // bookmark already exists, visit its page on Otter
+      chrome.tabs.create({
+        url: urlJoin(otterInstanceUrl, 'bookmark', data.key),
+      });
+    } else {
+      openBookmarkletPage(tab.url);
+    }
+  } catch (err) {
+    console.log(`🚀 ~ chrome.action.onClicked.addListener ~ err`, err);
+  }
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'otter-context-quick-save') {
+    onContextClick(info, tab, true);
+  } else {
+    onContextClick(info, tab, false);
+  }
+});
+
+chrome.commands.onCommand.addListener((command, tab) => {
+  console.log(`onCommand`, { command, tab });
+  if (command === 'quick-save') {
+    try {
+      quickSave(tab.url);
+    } catch (err) {
+      console.log(`🚀 ~ chrome.commands.onCommand.addListener ~ err`, err);
+    }
+  }
+});
+
+/**
+ * FIXME or change
+ * Perhaps use [chrome.tabs.onActivated](https://developer.chrome.com/docs/extensions/reference/tabs/#event-onActivated)
+ * or render something on the page instead. would need content script for that.
+ * still need a reliable to to check the active tab has already been saved in Otter and
+ * for the check to be run every time a new tab is opened/updated
+ */
+chrome.webNavigation.onCompleted.addListener(async (details) => {
+  if ((await isOptionsSetup()) === false) {
+    return;
+  }
+
+  try {
+    const response = await checkUrl(details.url);
+    console.log(
+      `🚀 ~ chrome.webNavigation.onCompleted.addListener ~ response`,
+      response
+    );
+    const { isSaved, data } = response;
+    console.log(`🚀 ~ chrome.webNavigation.onCompleted.addListener ~ data`, {
+      isSaved,
+      data,
+    });
+    if (isSaved) {
+      chrome.action.setBadgeText({
+        text: '🟢',
+      });
+    }
+  } catch (err) {
+    console.log(`🚀 ~ chrome.webNavigation.onCompleted.addListener ~ err`, err);
+  }
+});
+
+/**
+ * Context menus
+ */
+chrome.contextMenus.create({
+  title: '🦦 Quick save to Otter',
+  contexts: ['page', 'link'],
+  id: 'otter-context-quick-save',
+});
+
+chrome.contextMenus.create({
+  title: '🦦 Save to Otter',
+  contexts: ['page', 'link'],
+  id: 'otter-context-save',
+});

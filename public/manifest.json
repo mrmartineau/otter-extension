@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Otter Extension",
+  "name": "Save to Otter",
   "version": "0.1.0",
   "description": "A Chrome Extension for Otter bookmarks",
   "icons": {
@@ -14,12 +14,14 @@
   },
   "options_page": "options.html",
   "permissions": [
+    "commands",
     "storage",
     "activeTab",
     "scripting",
     "tabs",
     "webNavigation",
-    "system.display"
+    "system.display",
+    "contextMenus"
   ],
   "content_scripts": [
     {
@@ -28,5 +30,21 @@
       "js": ["contentScript.js"]
     }
   ],
-  "action": {}
+  "action": {},
+  "commands": {
+    "quick-save": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Quick save to Otter"
+    },
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+D",
+        "mac": "Command+Shift+D"
+      },
+      "description": "Save to Otter"
+    }
+  }
 }
