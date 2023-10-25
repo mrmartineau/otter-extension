@@ -73,53 +73,38 @@ const openBookmarkletPage = async (url) => {
   }
 };
 
-const onContextClick = async (info, tab, saveQuick = true) => {
-  if (saveQuick) {
-    try {
-      if (info.linkUrl) {
-        quickSave(info.linkUrl);
-      } else {
-        quickSave(tab.url);
-      }
-    } catch (err) {
-      console.log(
-        `🚀 ~ onContextClick ~ saveQuick ~ onCommand.addListener ~ err`,
-        err
-      );
+const onContextClick = async (info, tab) => {
+  try {
+    if (info.linkUrl) {
+      openBookmarkletPage(info.linkUrl);
+    } else {
+      openBookmarkletPage(tab.url);
     }
-  } else {
-    try {
-      if (info.linkUrl) {
-        openBookmarkletPage(info.linkUrl);
-      } else {
-        openBookmarkletPage(tab.url);
-      }
-    } catch (err) {
-      console.log(
-        `🚀 ~ onContextClick ~ save ~ onCommand.addListener ~ err`,
-        err
-      );
-    }
+  } catch (err) {
+    console.log(
+      `🚀 ~ onContextClick ~ save ~ onCommand.addListener ~ err`,
+      err
+    );
   }
 };
 
-const quickSave = async (url) => {
-  try {
-    const { otterInstanceUrl } = await getStorageItems();
-    const response = await otterFetch(
-      urlJoin(otterInstanceUrl, 'api', 'bookmark', 'new', {
-        query: {
-          url,
-        },
-      })
-    );
-    const { data } = response;
-    console.log(`🚀 ~ quickSave ~ data`, data);
-    return data;
-  } catch (err) {
-    console.log(`🚀 ~ quickSave ~ err`, err);
-  }
-};
+// const quickSave = async (url) => {
+//   try {
+//     const { otterInstanceUrl } = await getStorageItems();
+//     const response = await otterFetch(
+//       urlJoin(otterInstanceUrl, 'api', 'bookmark', 'new', {
+//         query: {
+//           url,
+//         },
+//       })
+//     );
+//     const { data } = response;
+//     console.log(`🚀 ~ quickSave ~ data`, data);
+//     return data;
+//   } catch (err) {
+//     console.log(`🚀 ~ quickSave ~ err`, err);
+//   }
+// };
 
 const checkUrl = async (url) => {
   try {
@@ -180,7 +165,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     if (isSaved) {
       // bookmark already exists, visit its page on Otter
       chrome.tabs.create({
-        url: urlJoin(otterInstanceUrl, 'bookmark', data.key),
+        url: urlJoin(otterInstanceUrl, 'bookmark', data.id),
       });
     } else {
       openBookmarkletPage(tab.url);
@@ -191,22 +176,18 @@ chrome.action.onClicked.addListener(async (tab) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'otter-context-quick-save') {
-    onContextClick(info, tab, true);
-  } else {
-    onContextClick(info, tab, false);
-  }
+  onContextClick(info, tab);
 });
 
 chrome.commands.onCommand.addListener((command, tab) => {
   console.log(`onCommand`, { command, tab });
-  if (command === 'quick-save') {
-    try {
-      quickSave(tab.url);
-    } catch (err) {
-      console.log(`🚀 ~ chrome.commands.onCommand.addListener ~ err`, err);
-    }
-  }
+  // if (command === 'quick-save') {
+  //   try {
+  //     quickSave(tab.url);
+  //   } catch (err) {
+  //     console.log(`🚀 ~ chrome.commands.onCommand.addListener ~ err`, err);
+  //   }
+  // }
 });
 
 /**
@@ -221,7 +202,8 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
     return;
   }
 
-  try {
+  // not sure if this works so removing for now
+  /* try {
     const response = await checkUrl(details.url);
     console.log(
       `🚀 ~ chrome.webNavigation.onCompleted.addListener ~ response`,
@@ -232,6 +214,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
       isSaved,
       data,
     });
+
     if (isSaved) {
       chrome.action.setBadgeText({
         text: '🟢',
@@ -239,20 +222,20 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
     }
   } catch (err) {
     console.log(`🚀 ~ chrome.webNavigation.onCompleted.addListener ~ err`, err);
-  }
+  } */
 });
 
 /**
  * Context menus
  */
-chrome.contextMenus.create({
-  title: '🦦 Quick save to Otter',
-  contexts: ['page', 'link'],
-  id: 'otter-context-quick-save',
-});
+// chrome.contextMenus.create({
+//   title: '🦦 Quick save to Otter',
+//   contexts: ['page', 'link'],
+//   id: 'otter-context-quick-save',
+// });
 
 chrome.contextMenus.create({
-  title: '🦦 Save to Otter',
+  title: 'Save to Otter',
   contexts: ['page', 'link'],
   id: 'otter-context-save',
 });
