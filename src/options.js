@@ -13,7 +13,6 @@ window.onload = function () {
 
     chrome.storage.sync.set({
       otterInstanceUrl: formData.get('url'),
-      supabaseApiSecret: formData.get('api-secret'),
       newBookmarkWindowBehaviour: formData.get('new-bookmark-window-behaviour'),
     });
     chrome.action.setBadgeText({
@@ -27,17 +26,8 @@ window.onload = function () {
     urlField.value = otterInstanceUrl;
   });
 
-  const apiSecretField = document.querySelector('#api-secret');
-  chrome.storage.sync.get(
-    'supabaseApiSecret',
-    function ({ supabaseApiSecret }) {
-      apiSecretField.value = supabaseApiSecret;
-    }
-  );
-
-  getStorageItems().then(({ otterInstanceUrl, supabaseApiSecret }) => {
-    console.log(`🚀 ~ supabaseApiSecret`, supabaseApiSecret);
-    if (!otterInstanceUrl || !supabaseApiSecret) {
+  getStorageItems().then(({ otterInstanceUrl }) => {
+    if (!otterInstanceUrl) {
       errorDiv.removeAttribute('hidden');
     } else {
       errorDiv.setAttribute('hidden', true);
